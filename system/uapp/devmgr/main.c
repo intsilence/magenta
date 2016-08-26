@@ -95,8 +95,8 @@ int service_starter(void* arg) {
     devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
 #endif
 
-    // launch the network service
-    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, NULL);
+#if 0
+    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, "/dev/console");
 
     devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
 
@@ -131,6 +131,9 @@ int virtcon_starter(void* arg) {
         mxio_watch_directory(dirfd, console_device_added, NULL);
     }
     close(dirfd);
+    mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
+    close(fd);
+#endif
     return 0;
 }
 #endif
@@ -156,7 +159,7 @@ int main(int argc, char** argv) {
 
     devmgr_init(false);
     devmgr_vfs_init();
-
+#if 0
 #if !defined(__x86_64__)
     // Until crashlogging exists, ensure we see load info
     // from the linker in the log
@@ -166,6 +169,7 @@ int main(int argc, char** argv) {
     if (!disable_crashlogger)
         devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
 #endif
+<<<<<<< 1c07cefdbe0a8297a30229d9e9d2bb200bf10d99
 
     mx_status_t status = devmgr_launch_acpisvc();
     if (status != NO_ERROR) {
@@ -176,6 +180,8 @@ int main(int argc, char** argv) {
     // it, it will fail later.
     devmgr_init_pcie();
 
+=======
+#endif
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
 
@@ -183,9 +189,9 @@ int main(int argc, char** argv) {
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
         thrd_detach(t);
     }
-    if ((thrd_create_with_name(&t, virtcon_starter, NULL, "virtcon-starter")) == thrd_success) {
-        thrd_detach(t);
-    }
+ //   if ((thrd_create_with_name(&t, virtcon_starter, NULL, "virtcon-starter")) == thrd_success) {
+ //       thrd_detach(t);
+ //   }
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");
