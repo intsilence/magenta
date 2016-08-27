@@ -164,7 +164,6 @@ static mx_status_t map_dso_image(const char* name,
         status = map_dso_segment(process, name, true, vmo,
                                  code_start, code_end, &code_address);
     }
-
     return status;
 }
 

@@ -1076,6 +1076,13 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size
     return vmo->Read(data, len, offset);
 }
 
+mx_status_t sys_cache_sync(uint64_t start, uint64_t len) {
+
+    printf("Doing cache sync starting at %llx for %llx bytes\n",start,len);
+    arch_sync_cache_range(start,len);
+    return NO_ERROR;
+}
+
 mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 

@@ -40,6 +40,9 @@ public:
     // get a pointer to a page at a given offset
     vm_page_t* GetPage(uint64_t offset);
 
+    // cache sync
+    status_t CacheSync(uint64_t offset, uint64_t len);
+    
     // fault in a page at a given offset with PF_FLAGS
     vm_page_t* FaultPage(uint64_t offset, uint pf_flags);
 

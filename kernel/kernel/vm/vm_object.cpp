@@ -7,6 +7,8 @@
 #include "kernel/vm/vm_object.h"
 
 #include "vm_priv.h"
+
+#include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
 #include <kernel/auto_lock.h>
@@ -173,6 +175,47 @@ status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
 
     AddPageToArray(index, p);
 
+    return NO_ERROR;
+}
+
+status_t VmObject::CacheSync(uint64_t offset, uint64_t len) {
+   DEBUG_ASSERT(magic_ == MAGIC);
+
+    //printf("Attempting cache sync at %llx of length %llx\n",offset,len);
+    AutoLock a(lock_);
+
+    // trim the size
+    if (!TrimRange(offset, len, size_))
+        return ERR_OUT_OF_RANGE;
+
+    // was in range, just zero length
+    if (len == 0)
+        return 0;
+
+    // walk the list of pages and do the write
+    size_t dest_offset = 0;
+    while (len > 0) {
+        size_t page_offset = offset % PAGE_SIZE;
+        size_t tocopy = MIN(PAGE_SIZE - page_offset, len);
+
+        // fault in the page
+        vm_page_t* p = FaultPageLocked(offset, 0);
+        if (!p)
+            return ERR_NO_MEMORY;
+
+        // compute the kernel mapping of this page
+        paddr_t pa = vm_page_to_paddr(p);
+        uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_kvaddr(pa));
+
+        // call the copy routine
+        //printf("Attempting cache sync at %llx of length %lx\n",(uint64_t)(page_ptr + page_offset),tocopy);
+        arch_sync_cache_range((uint64_t)(page_ptr + page_offset), tocopy);
+
+        offset += tocopy;
+
+        dest_offset += tocopy;
+        len -= tocopy;
+    }
     return NO_ERROR;
 }
 

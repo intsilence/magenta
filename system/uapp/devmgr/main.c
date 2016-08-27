@@ -133,6 +133,10 @@ int virtcon_starter(void* arg) {
     close(dirfd);
     mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
     close(fd);
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 #endif
     return 0;
 }
@@ -158,8 +162,11 @@ int main(int argc, char** argv) {
     }
 
     devmgr_init(false);
-    devmgr_vfs_init();
 #if 0
+=======
+    //devmgr_vfs_init();
+
+>>>>>>> Stashed changes
 #if !defined(__x86_64__)
     // Until crashlogging exists, ensure we see load info
     // from the linker in the log

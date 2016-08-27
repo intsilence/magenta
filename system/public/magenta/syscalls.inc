@@ -124,6 +124,7 @@ MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, int* wake_ptr, uint32_
                     int current_value, int* requeue_ptr, uint32_t requeue_count)
 
 // Memory management
+MAGENTA_SYSCALL_DEF(2, 2, 99, mx_status_t, cache_sync, uint64_t start, uint64_t len)
 MAGENTA_SYSCALL_DEF(1, 2, 100, mx_handle_t, vmo_create, uint64_t size)
 MAGENTA_SYSCALL_DEF(4, 5, 101, mx_ssize_t, vmo_read, mx_handle_t handle, void *data, uint64_t offset,
                     mx_size_t len)
@@ -138,6 +139,9 @@ MAGENTA_SYSCALL_DEF(5, 5, 106, mx_status_t, mmap_device_memory, mx_handle_t hand
                     uint32_t len, mx_cache_policy_t cache_policy, USER_PTR(void *) out_vaddr)
 MAGENTA_SYSCALL_DEF(4, 4, 107, mx_status_t, alloc_device_memory, mx_handle_t handle, uint32_t len,
                     mx_paddr_t *out_paddr, void **out_vaddr)
+
+
+
 
 MAGENTA_SYSCALL_DEF(2, 2, 160, mx_ssize_t, cprng_draw, USER_PTR(void) buffer, mx_size_t len);
 // TODO(security)

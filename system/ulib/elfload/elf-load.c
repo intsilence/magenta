@@ -1,6 +1,7 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include "util.h"
 
 #include <elfload/elfload.h>
 
@@ -180,21 +181,29 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
             if (copy_vmo < 0)
                 return copy_vmo;
             uintptr_t window = 0;
+            mx_debug_write("map original vmo\n",17);
             mx_status_t status = mx_process_map_vm(
                 0, vmo, file_start, data_size, &window, MX_VM_FLAG_PERM_READ);
             if (status < 0) {
                 mx_handle_close(copy_vmo);
                 return status;
             }
+            mx_debug_write("Copy from mapped original vmo into copy vmo\n",44);
+
             mx_ssize_t n = mx_vmo_write(copy_vmo, (void*)window,
                                               0, data_size);
+            mx_debug_write("Unmap the window\n",17);
+
             mx_process_unmap_vm(0, window, 0);
+
             if (n >= 0 && n != (mx_ssize_t)data_size)
                 n = ERR_IO;
             if (n < 0) {
                 mx_handle_close(copy_vmo);
                 return n;
             }
+            mx_debug_write("vmo = copy_vmo\n",15);
+
             vmo = copy_vmo;                 // Leak the handle.
             file_end -= file_start;
             file_start = 0;
@@ -202,24 +211,39 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
     }
 #endif
 
-    if (ph->p_filesz == ph->p_memsz)
+    if (ph->p_filesz == ph->p_memsz) {
         // Straightforward segment, map all the whole pages from the file.
-        return mx_process_map_vm(proc, vmo, file_start, size, &start, flags);
+
+        mx_debug_write("Returning after mapping the vmo to file_start (straightforward case)\n",69);
+        mx_status_t status = mx_process_map_vm(proc, vmo, file_start, size, &start, flags);
+        mx_process_map_vm(proc, vmo, file_start, size, &start, flags);
+        mx_cache_sync(start,size);
+        return status;
+    }
 
     const size_t file_size = file_end - file_start;
 
     // This segment has some bss, so things are more complicated.
     // Only the leading portion is directly mapped in from the file.
     if (file_size > 0) {
+
+        mx_debug_write("Doing the bss case, mapping the entire vmo from file_start to file_size\n",72);
+
         mx_status_t status = mx_process_map_vm(proc, vmo, file_start,
                                                file_size, &start, flags);
         if (status != NO_ERROR)
             return status;
+        
+        mx_cache_sync(start,file_size);
+
         start += file_size;
         size -= file_size;
     }
 
     // The rest of the segment will be backed by anonymous memory.
+
+    mx_debug_write("Create the bss vmo\n",19);
+
     mx_handle_t bss_vmo = mx_vmo_create(size);
     if (bss_vmo < 0)
         return bss_vmo;
@@ -229,6 +253,8 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
     // to read that data out of the file and copy it into bss_vmo.
     if (partial_page > 0) {
         char buffer[PAGE_SIZE];
+
+        mx_debug_write("Read the big file vmo into buffer\n",34);
         mx_ssize_t n = mx_vmo_read(vmo, buffer, file_end, partial_page);
         if (n < 0) {
             mx_handle_close(bss_vmo);
@@ -238,6 +264,8 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
             mx_handle_close(bss_vmo);
             return ERR_ELF_BAD_FORMAT;
         }
+
+        mx_debug_write("Write the buffer data into bss vmo\n",35);
         n = mx_vmo_write(bss_vmo, buffer, 0, n);
         if (n < 0) {
             mx_handle_close(bss_vmo);
@@ -249,8 +277,10 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
         }
     }
 
+    mx_debug_write("map the bss_vmo\n",16);
     mx_status_t status = mx_process_map_vm(proc, bss_vmo, 0,
                                            size, &start, flags);
+    mx_debug_write("close the bss_vmo\n",18);
     mx_handle_close(bss_vmo);
 
     return status;
