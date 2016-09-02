@@ -347,10 +347,13 @@ static int arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             CF;
+            ARM64_TLBI_NOADDR(vmalle1);
+#if 0
             if (asid == MMU_ARM64_GLOBAL_ASID)
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             else
                 ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
+#endif
         } else {
             LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
         }
